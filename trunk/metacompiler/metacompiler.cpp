@@ -9,37 +9,38 @@
 #include <set>
 #include "time.h"
 #include "konstanty.h"
+
 using namespace std;
 
 
 set<RULE> CLOSURE(RULE &zac)
 {
-set<RULE> ret;
+set<RULE> ret;		//mnozina ktory vratime nakonci
+unsigned long size=0;   //posledna velkost mnoziny pre kontrolu ci sme do nej nieco pridali
 set<RULE>::iterator it;
 ret.insert(zac);
-unsigned long size=0;
 do 
 {
 	bool brk=false;
 	size=ret.size();
-	for(it=ret.begin();it!=ret.end();it++)
+	for(it=ret.begin();it!=ret.end();it++)   //pre kazde pravidlo ktore uz v uzavere je
 	{
-		if (it->dot<it->right.size())
+		if (it->dot<it->right.size())	// a bodka este nie je na konci pravidla teda to za botkou mozem rozvinut
 		{
-			for(vector<RULE>::iterator pridajR=rulesin.begin();pridajR!=rulesin.end();pridajR++)
+			for(vector<RULE>::iterator pridajR=rulesin.begin();pridajR!=rulesin.end();pridajR++)  //vezmem vsetky pravidla
 			{
-				if (pridajR->left==it->right[it->dot])
+				if (pridajR->left==it->right[it->dot])  //vyfiltrujem tie ktore zacinaju neterminalom ktory rozvijane pravidlo koncilo
 				{
-					if (ret.find(*pridajR)==ret.end()) 
-					{
-						ret.insert(*pridajR);
-						brk=true;
-						break;
-					}
+//					if (ret.find(*pridajR)==ret.end()) 
+//					{
+						ret.insert(*pridajR); // a pridam ho uzaveru
+//						brk=true;
+//						break;
+//					}
 				}
 			}
 		}
-		if (brk) {brk=false;break;}
+//		if (brk) {brk=false;break;}
 	}
 } while (size<ret.size());
 return ret;
