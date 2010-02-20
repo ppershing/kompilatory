@@ -8,28 +8,32 @@
 #include <map>
 #include <set>
 #include "time.h"
-#include "konstanty.h"
 
 using namespace std;
 
+#include "konstanty.h"
+#include "read_input.h"
 
-set<RULE> CLOSURE(RULE &zac)
+
+
+
+set<RULE> CLOSURE(RULE &pravidlo)
 {
-set<RULE> ret;		//mnozina ktory vratime nakonci
+set<RULE> ret;		//mnozina ktoru vratime nakonci
 unsigned long size=0;   //posledna velkost mnoziny pre kontrolu ci sme do nej nieco pridali
 set<RULE>::iterator it;
-ret.insert(zac);
+ret.insert(pravidlo);
 do 
 {
 	bool brk=false;
 	size=ret.size();
 	for(it=ret.begin();it!=ret.end();it++)   //pre kazde pravidlo ktore uz v uzavere je
 	{
-		if (it->dot<it->right.size())	// a bodka este nie je na konci pravidla teda to za botkou mozem rozvinut
+		if (it->dot < it->right.size())	// a bodka este nie je na konci pravidla teda to za botkou mozem rozvinut
 		{
 			for(vector<RULE>::iterator pridajR=rulesin.begin();pridajR!=rulesin.end();pridajR++)  //vezmem vsetky pravidla
 			{
-				if (pridajR->left==it->right[it->dot])  //vyfiltrujem tie ktore zacinaju neterminalom ktory rozvijane pravidlo koncilo
+				if (pridajR->left == it->right[it->dot])  //vyfiltrujem tie ktore zacinaju neterminalom ktory rozvijane pravidlo koncilo
 				{
 //					if (ret.find(*pridajR)==ret.end()) 
 //					{
@@ -46,34 +50,37 @@ do
 return ret;
 }
 
-set<RULE> GOTO(set<RULE> &I,string &X)
+set<RULE> GOTO(set<RULE> &stav,string &symbol)
 {
-set<RULE> ret;
-for(set<RULE>::iterator it=I.begin();it!=I.end();it++)
+set<RULE> ret;			//mnozina ktoru vratime nakonci
+for(set<RULE>::iterator it=stav.begin();it!=stav.end();it++)	//pre kazde pravidlo
 {
-	if (it->dot<it->right.size())
+	if (it->dot < it->right.size())		//ktore splna ze bodkou v nom este mozme pohnut
 	{
-		if (X==it->right[it->dot])
+		if (symbol == it->right[it->dot])  //ak je za bodkou spravny symbol
 		{
-			RULE tmp=*it;tmp.dot++;
-			set<RULE> closure_tmp=CLOSURE(tmp);
-			for(set<RULE>::iterator it2=closure_tmp.begin();it2!=closure_tmp.end();it2++)
-				ret.insert(*it2);
+			RULE tmp=*it;
+			tmp.dot++;	//posunieme v pravidle bodku
+			set<RULE> closure_tmp=CLOSURE(tmp);	//spravime uzaver
+			//for(set<RULE>::iterator it2=closure_tmp.begin();it2!=closure_tmp.end();it2++)
+			//	ret.insert(*it2);
+			ret.insert(closure_tmp.begin(),closure_tmp.end());	//a pridame to do goto mnoziny
 		}
 	}
 }
 return ret;
 }
 
-long ISEND(set<RULE> &stav)
+long ISEND(set<RULE> &stav)	//vrati ci nejake pravidlo stavu je konecne
 {
-	for(set<RULE>::iterator it=stav.begin();it!=stav.end();it++)
+	for(set<RULE>::iterator it=stav.begin();it!=stav.end();it++)	//zo vsetkych pravidiel v nom
 	{
-		if (it->dot==it->right.size())
-			return it->number;
+		if (it->dot == it->right.size())	//najde take kde je botka nakonci
+			return it->number;	//a vrati cislo toho pravidla
 	}
 	return -1;
 }
+
 
 int main(int argc, char* argv[])
 {
@@ -82,135 +89,46 @@ int main(int argc, char* argv[])
 		fprintf(stderr,"usage>%s meno_suboru\n",argv[0]);
 		exit(0);
 	}
+	if (readInput(argv[1]) != 0) //nacita a poparsuje vstup do rules_in 
+  		return -1;
 
-// char sdate[9];
-//char stime[9];
-//_strdate( sdate );
-//_strtime( stime );
-//cout << "#" << "time: " << stime << " date: " << sdate << endl;
+
+	string vystup=subor.c_str();
+	vystup+=".dot";
+        ofstream ofs( vystup.c_str());
+	ofs << "digraph html {"<<endl;
+        ofs << "rankdir=LR;concentrate=true;" <<endl;
+	ofs << "node [style=\"filled\", color=greenyellow, fontsize=10];"<<endl;
+        ofs << "edge [labeldistance = 1.5]; " << endl; 
 
 
   myEOF+=char(0);
   myEOF+="-1";
   customStartSymbol="_MYCUSTOMSTART";
   NT.insert(customStartSymbol);
-  validT.insert(myEOF);
   NT.insert(myEOF);
+  validT.insert(myEOF);
+ 
 
-	string subor;
-	subor=argv[1];
-//	cout << subor <<endl;
-//	 ifstream ifs( "D:\\SKOLA\\KOMPILATORY\\kompilator\\Debug\\simple_syntax.txt" );
-	string vystup=subor.c_str();
-	vystup+=".dot";
-	 ifstream ifs( subor.c_str() );
-         ofstream ofs( vystup.c_str());
-	ofs << "digraph html {"<<endl;
-        ofs << "rankdir=LR;concentrate=true;" <<endl;
-//	ofs << "digraph finite_state_machine {"<<endl;
-		ofs << "node [style=\"filled\", color=greenyellow, fontsize=10];"<<endl;
-                ofs << "edge [labeldistance = 1.5]; " << endl; 
-  string line;
-  long linenumber=-1;
-	long CisloPravidla=1;
-	rulesin.push_back(RULE());
-  while( getline( ifs, line ) )
-  {
-	  linenumber++;
-	  RULE newrule;
-	  newrule.dot=0;
-	  newrule.number=CisloPravidla;
-	  newrule.semantic=="";
-	  unsigned long i=0; //som na zaciatku stringu
-	  while(i<line.size())
-	  {
-  		  if (line[i]==':'){ i++;break;}
-		  if ((line[i]<'0')||(line[i]>'9'))
-		  {
-			  cerr << "Pravidlo "<<CisloPravidla << " znak " << i <<" semantika obsahuje znak ktory nie je cislo #"<< line[i] << "# (chyba znak '<')" <<endl;exit(8);
-		  }
-		  newrule.semantic+=line[i];
-		  i++;
-	  }
-	  if (newrule.semantic.empty()) newrule.semantic+="0";
-	  if (line[i]!='<') {cerr<< "Pravidlo "<<CisloPravidla << " znak " << i <<" nezacina neterminalom(chyba znak '<')" <<endl;exit(8);}
-	  else i++;
-	  newrule.left="_";
-	  while(i<line.size())
-	  {
-		  if (line[i]=='>'){ //newrule.left+="_";
-								i++;break;}
-		  newrule.left+=line[i];
-		  i++;
-	  }
-	  if (firstNT.empty()) firstNT=newrule.left;
-	  NT.insert(newrule.left);
-	  string znak;
-	  while(i<line.size())
-	  {
-		 if ((line[i]!='"') && (line[i]!='<')) 
-		 {
-			 cerr << "Zly znak na vstupe >" << line[i] << "<[" << linenumber <<","<< i << "]" << endl;
-			 i++;
-		 }
-		 if (line[i]=='"')
-		 {
-			 i++;
-			  while(i<line.size())
-			  {
-				  if (line[i]=='"'){ znak.clear();i++;break;}
-				  if (line[i]!='\\')
-				  {
-					  string aa;aa+=line[i];
-					  newrule.right.push_back(aa);
-					  validT.insert(aa);
-				  } else
-				  {
-					  if (line[i+1]=='\\') {newrule.right.push_back("\\");validT.insert("\\");}
-					  if (line[i+1]=='n')  {newrule.right.push_back(string()+char(10));validT.insert("\n");}
-					  if (line[i+1]=='u')  {newrule.right.push_back("'");validT.insert("\'");}
-					  i++;
-				  }
-				  i++;
-			  }
-		 }
-		 if (line[i]=='<')
-		 {
-			 i++;
-			 znak+="_";
-			  while(i<line.size())
-			  {
-				  if (line[i]=='>'){ //znak+="_";
-										newrule.right.push_back(znak);znak.clear();i++;break;}
-				  znak+=line[i];
-				  i++;
-			  }
-		 }
-	  }
-	  rulesin.push_back(newrule);
-	  CisloPravidla++;
-     //text_file.push_back( temp );
-  }
-    RULE zac;zac.dot=0;zac.left=customStartSymbol;zac.right.push_back(firstNT);zac.right.push_back(myEOF);zac.number=0;
-
-    rulesin[0]=zac;
+ 
+	RULE zac;zac.dot=0;zac.left=customStartSymbol;zac.right.push_back(firstNT);zac.right.push_back(myEOF);zac.number=0;
+	rulesin[0]=zac; // pridanie noveho zaciatocneho pravidla
 
 	ComputeFirst();
 	ComputeFollow();
+
 	vector<set<RULE> > automat;
 	automat.push_back(CLOSURE(zac));
-//	set<RULE> test=CLOSURE(rulesin[0]);
-//	set<RULE> test2=GOTO(automat[0],string("("));
 
 
-	unsigned char a=-1;
-        do 
+	for(long ch=0;ch<=255;ch++)
 	{
-          a++;
-		string aa;aa+=a;
-		NT.insert(aa);
-	} while (a!=255);
-	vypisZaciatok();
+		string tmp;
+		tmp+=unsigned char(ch);
+		NT.insert(tmp);
+	}
+
+	vypisZaciatok();	//vypise veci ktore sa nachadzaju na zaciatku tabulky
 
 	stringstream stramGototable (stringstream::in | stringstream::out);
 	stramGototable << "goto_table:" <<endl;
